@@ -29,17 +29,28 @@ typedef struct
 } OutputBoundary;
 
 int ReadFoundTime(const char*, Samples**, unsigned int*);
+
 Samples* AllocateSamples(const unsigned int);
+
 Samples* GetCleanT(Samples*);
+
 Samples* GetCleanF(Samples*);
+
 void GetMaxValLoc(Samples*, unsigned int*, unsigned int*);
+
 float Mean(Samples*);
+
 int DetectBT(Samples*, unsigned int, unsigned int, unsigned int);
+
 OutputBoundary FindBoundary(Samples*, Samples*, Samples**, unsigned int*, unsigned int,
                             unsigned int);
+
 unsigned int FindSchedule(Samples*, Samples*, unsigned int[SCORE_SLOT][MAX_SLOT_NUM],
                           unsigned int, unsigned int);
+
 unsigned int Min(unsigned int[], unsigned int);
+
+void DeallocateSamples(Samples*);
 
 
 int main(int argc, const char* argv[])
@@ -102,6 +113,11 @@ int main(int argc, const char* argv[])
     printf("we think the schedule is %d!!!\n", schedule);
 #endif
     
+    DeallocateSamples(foundTime);
+    DeallocateSamples(cleanT);
+    DeallocateSamples(cleanF);
+    DeallocateSamples(shouldTake);
+    
     return 0;
 }
 
@@ -147,6 +163,12 @@ Samples* AllocateSamples(unsigned int size)
     sample = malloc(sizeof(Samples));
     sample->samples = malloc(sizeof(unsigned int) * size);
     return sample;
+}
+
+void DeallocateSamples(Samples* sample)
+{
+    free(sample->samples);
+    free(sample);
 }
 
 Samples* GetCleanT(Samples* sample)
