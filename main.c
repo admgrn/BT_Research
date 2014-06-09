@@ -1,8 +1,7 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
-
-#define _DEBUG
 
 /* Possible TODO: Add these as input arugments */
 const unsigned int BT_LEN = 625;
@@ -383,7 +382,7 @@ OutputBoundary FindBoundary(Samples* foundTime, Samples* cleanF, Samples** shoul
     
     for (stepdown = 1; stepdown <= 4; ++stepdown)
     {
-        if (pow(oneP, stepdown) < TARGET_P)
+        if (powf(oneP, stepdown) < TARGET_P)
         {
             break;
         }
@@ -468,7 +467,7 @@ unsigned int FindSchedule(Samples* foundTime, Samples* shouldTake,
                 {
                     slotIdx = foundTime->samples[jjj] - thisEstBgn;
                     slotIdx = slotIdx % (slen * BT_LEN);
-                    slotIdx = round((float)slotIdx / BT_LEN);
+                    slotIdx = roundf(slotIdx / (float)BT_LEN);
                     
                     if (slotIdx != 0 && slotIdx != slen - 1 && slotIdx != slen)
                     {
