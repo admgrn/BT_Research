@@ -159,10 +159,10 @@ for j=1:length(cleanT)
 end
 
 if 1
-    plot(cleanF, 'g');
-    xlabel('Time (microseconds)');
-    ylabel('Number of Collisions');
-    title('Failure of Wi-fi Data Frames in the Presence and Absence of Bluetooth')
+    %plot(cleanF, 'g');
+    %xlabel('Time (microseconds)');
+    %ylabel('Number of Collisions');
+    %title('Failure of Wi-fi Data Frames in the Presence and Absence of Bluetooth')
     %legend('Sum of Clean & Dirty Frames','Dirty Frames', 'Clean Frames')
 end
 

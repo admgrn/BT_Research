@@ -4,11 +4,11 @@
 #include <math.h>
 
 /* Possible TODO: Add these as input arugments */
-const unsigned int BT_LEN = 625;
-const unsigned int CTS_t = 60;
-const unsigned int SIFS = 10;
-const unsigned int DUMMY_t = 50;
-const unsigned int MAX_SLOT_NUM = 6;
+const unsigned int BT_LEN = 625;		// Length of BT timeslot
+const unsigned int CTS_t = 60;			// Time taken to transmit clear to send signal
+const unsigned int SIFS = 10;			// Short Interframe Spacing
+const unsigned int DUMMY_t = 50;		// Length of probe packet
+const unsigned int MAX_SLOT_NUM = 6;		// Max allowable timeslots for a single BT transmission/ reponse
 const unsigned int SCORE_SLOT = 2;
 
 const unsigned int MAX_SAMPLE_SIZE = 100;
@@ -18,7 +18,6 @@ typedef struct
 {
     unsigned int length;
     unsigned int* samples;
-    
 } Samples;
 
 typedef struct
@@ -41,16 +40,13 @@ float Mean(Samples*);
 
 int DetectBT(Samples*, unsigned int, unsigned int, unsigned int);
 
-OutputBoundary FindBoundary(Samples*, Samples*, Samples**, unsigned int*, unsigned int,
-                            unsigned int);
+OutputBoundary FindBoundary(Samples*, Samples*, Samples**, unsigned int*, unsigned int, unsigned int);
 
-unsigned int FindSchedule(Samples*, Samples*, unsigned int[SCORE_SLOT][MAX_SLOT_NUM],
-                          unsigned int, unsigned int);
+unsigned int FindSchedule(Samples*, Samples*, unsigned int[SCORE_SLOT][MAX_SLOT_NUM], unsigned int, unsigned int);
 
 unsigned int Min(unsigned int[], unsigned int);
 
 void DeallocateSamples(Samples*);
-
 
 int main(int argc, const char* argv[])
 {
@@ -65,58 +61,57 @@ int main(int argc, const char* argv[])
     unsigned int maxLocation;
     unsigned int totalTakeNum;
     unsigned int schedule;
-    
+
     if (argc == 2)
     {
         if (!ReadFoundTime(argv[1], &foundTime, &totalNumberSamples))
         {
             return 1;
         }
-        
     }
     else
     {
-#ifdef _DEBUG
-        printf("USAGE: %s <file>\n", argv[0]);
-#endif
+	#ifdef _DEBUG
+        	printf("USAGE: %s <file>\n", argv[0]);
+	#endif
         return 1;
     }
-    
+
     cleanT = GetCleanT(foundTime);
     cleanF = GetCleanF(cleanT);
     GetMaxValLoc(cleanF, &maxValue, &maxLocation);
-    
+
     if (!DetectBT(cleanF, foundTime->length, maxValue, totalNumberSamples))
     {
         return 0;
     }
-    
+
     boundary = FindBoundary(foundTime, cleanF, &shouldTake, &totalTakeNum, maxLocation, maxValue);
     schedule = FindSchedule(foundTime, shouldTake, scores, maxLocation, totalTakeNum);
-    
-#ifdef _DEBUG
-    printf("outputrange =\n\n\t%d\t%d\n", boundary.min, boundary.max);
-    printf("scores =\n\n");
-    
-    int i, j;
-    
-    for (i = 0; i < SCORE_SLOT; ++i)
-    {
-        for (j = 0; j < MAX_SLOT_NUM; ++j)
-        {
-            printf("\t%d",scores[i][j]);
-        }
-        printf("\n");
-    }
-    
-    printf("we think the schedule is %d!!!\n", schedule);
-#endif
-    
+
+    #ifdef _DEBUG
+      printf("outputrange =\n\n\t%d\t%d\n", boundary.min, boundary.max);
+      printf("scores =\n\n");
+
+      int i, j;
+
+      for (i = 0; i < SCORE_SLOT; ++i)
+      {
+          for (j = 0; j < MAX_SLOT_NUM; ++j)
+          {
+              printf("\t%d",scores[i][j]);
+          }
+          printf("\n");
+      }
+
+      printf("we think the schedule is %d!!!\n", schedule);
+    #endif
+
     DeallocateSamples(foundTime);
     DeallocateSamples(cleanT);
     DeallocateSamples(cleanF);
     DeallocateSamples(shouldTake);
-    
+
     return 0;
 }
 
@@ -127,30 +122,28 @@ int ReadFoundTime(const char* filename, Samples** foundTime, unsigned int* total
 
     FILE* inputStream = fopen(filename, "r+");
     inputValue = 0;
-    
+
     if (inputStream == NULL)
     {
         return 0;
     }
-    
+
     *foundTime = AllocateSamples(MAX_SAMPLE_SIZE);
     i = 0;
-    
+
     if(fscanf(inputStream, "%d\n", totalSamples) == EOF)
     {
         return 0;
     }
-    
+
     while(fscanf(inputStream, "%d\n", &inputValue) != EOF)
     {
         if (i >= MAX_SAMPLE_SIZE)
         {
             break;
         }
-        
         (*foundTime)->samples[i++] = inputValue;
     }
-    
     (*foundTime)->length = i;
     fclose(inputStream);
     return 1;
@@ -174,16 +167,14 @@ Samples* GetCleanT(Samples* sample)
 {
     unsigned int i;
     Samples* cleanT;
-    
     cleanT = AllocateSamples(MAX_SAMPLE_SIZE);
     cleanT->length = sample->length;
-    
+
     for (i = 0; i < sample->length; ++i)
     {
         /* TODO: Do we need to add 1 to all values, also negative 1 is subtracted to fix index */
         cleanT->samples[i] = (((sample->samples[i] - 1) - CTS_t - 2 * SIFS) % BT_LEN);
     }
-    
     return cleanT;
 }
 
@@ -196,26 +187,26 @@ Samples* GetCleanF(Samples* sample)
     unsigned int thisT;
     unsigned int thisBgn;
     unsigned int thisEnd;
-    
+
     cleanF = AllocateSamples(BT_LEN);
     cleanF->length = BT_LEN;
     D = DUMMY_t + CTS_t + 2 * SIFS;
     T = BT_LEN - D;
-    
+
     for (i = 0; i < cleanF->length; ++i)
     {
         cleanF->samples[i] = 0;
     }
-    
+
     for (i = 0; i < sample->length; ++i)
     {
         thisT = sample->samples[i];
-        
+
         if (thisT < T )
         {
             thisBgn = thisT;
             thisEnd = thisT + D - 1;    /* Do we need - 1 here */
-            
+
             for (j = thisBgn; j < thisEnd; ++j)
             {
                 cleanF->samples[j] = cleanF->samples[j] + 1;
@@ -225,22 +216,21 @@ Samples* GetCleanF(Samples* sample)
         {
             thisBgn = thisT;
             thisEnd = BT_LEN;
-            
+
             for (j = thisBgn; j < thisEnd; ++ j)
             {
                 cleanF->samples[j] = cleanF->samples[j] + 1;
             }
-            
+
             thisBgn = 0;
             thisEnd = D - (BT_LEN - thisT);
-            
+
            for (j = thisBgn; j < thisEnd; ++j)
             {
                 cleanF->samples[j] = cleanF->samples[j] + 1;
             }
         }
     }
-    
     return cleanF;
 }
 
@@ -250,18 +240,18 @@ void GetMaxValLoc(Samples* sample, unsigned int* max, unsigned int* loc)
     unsigned int maximum = 0;
     unsigned int value;
     unsigned int i;
-    
+
     for (i = 0; i < sample->length; ++i)
     {
         value = sample->samples[i];
-        
+
         if (value > maximum)
         {
             maximum = value;
             position = i;
         }
     }
-    
+
     *max = maximum;
     *loc = position;
 }
@@ -270,12 +260,12 @@ float Mean(Samples* sample)
 {
     unsigned int i;
     unsigned int value = 0;
-    
+
     for (i = 0; i < sample->length; ++i)
     {
         value += sample->samples[i];
     }
-    
+
     return (float)value / sample->length;
 }
 
@@ -283,17 +273,15 @@ int DetectBT(Samples* sample, unsigned int found, unsigned int maxval, unsigned 
 {
     float sampleRatio;
     float ave;
-    
+
     sampleRatio = (float)found / total;
     ave = Mean(sample);
-    
-    
+
     if (sampleRatio > BELIEF_RAND10_MAX_P && maxval > ave * 2.5)
     {
-#ifdef _DEBUG
-        printf("10 sample ratio %f, maxval %d, avg %f, We think there is BT!\n", sampleRatio,
-               maxval, ave);
-#endif
+        #ifdef _DEBUG
+          printf("10 sample ratio %f, maxval %d, avg %f, We think there is BT!\n", sampleRatio, maxval, ave);
+        #endif
         return 1;
     }
     else
@@ -302,10 +290,8 @@ int DetectBT(Samples* sample, unsigned int found, unsigned int maxval, unsigned 
         printf("10 sample ratio %f, maxval %d, avg %f, We think there is NOOOOOOOOOO BT!\n", sampleRatio,
                maxval, ave);
 #endif
-        
         return 0;
     }
-    
 }
 
 OutputBoundary FindBoundary(Samples* foundTime, Samples* cleanF, Samples** shouldTake,
@@ -328,16 +314,16 @@ OutputBoundary FindBoundary(Samples* foundTime, Samples* cleanF, Samples** shoul
     int currpnt;
     uint8_t shouldTakeThisOne;
     OutputBoundary output;
-    
+
     *shouldTake = AllocateSamples(foundTime->length);
     (*shouldTake)->length = foundTime->length;
     D = DUMMY_t + CTS_t + 2 * SIFS;
-    
+
     for (i = 0; i < foundTime->length; ++i)
     {
         dummyTime = foundTime->samples[i] % BT_LEN;
         shouldTakeThisOne = 0;
-        
+
         if (dummyTime < maxloc)
         {
             if (maxloc - dummyTime <= DUMMY_t + RANGE_MARGIN)
