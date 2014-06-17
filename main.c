@@ -3,12 +3,15 @@
 #include <stdlib.h>
 #include <math.h>
 
+#define INPUTARRAYSTART 1                // 0 if input array starts at 0, 1 if input array starts at 1
+#define ARRAYDIFFERENCE 1 - INPUTARRAYSTART
+
 /* Possible TODO: Add these as input arugments */
 const unsigned int BT_LEN = 625;		// Length of BT timeslot
 const unsigned int CTS_t = 60;			// Time taken to transmit clear to send signal
 const unsigned int SIFS = 10;			// Short Interframe Spacing
 const unsigned int DUMMY_t = 50;		// Length of probe packet
-const unsigned int MAX_SLOT_NUM = 6;		// Max allowable timeslots for a single BT transmission/ reponse
+const unsigned int MAX_SLOT_NUM = 6;    // Max allowable timeslots for a single BT transmission/ reponse
 const unsigned int SCORE_SLOT = 2;
 
 const unsigned int MAX_SAMPLE_SIZE = 100;
@@ -91,7 +94,7 @@ int main(int argc, const char* argv[])
 
     #ifdef _DEBUG
       printf("outputrange =\n\n\t%d\t%d\n", boundary.min, boundary.max);
-      printf("scores =\n\n");
+      printf("\nscores =\n\n");
 
       int i, j;
 
@@ -104,7 +107,7 @@ int main(int argc, const char* argv[])
           printf("\n");
       }
 
-      printf("we think the schedule is %d!!!\n", schedule);
+      printf("\nwe think the schedule is %d!!!\n", schedule);
     #endif
 
     DeallocateSamples(foundTime);
@@ -142,9 +145,11 @@ int ReadFoundTime(const char* filename, Samples** foundTime, unsigned int* total
         {
             break;
         }
-        (*foundTime)->samples[i++] = inputValue;
+        (*foundTime)->samples[i++] = inputValue + ARRAYDIFFERENCE;
     }
+    
     (*foundTime)->length = i;
+    
     fclose(inputStream);
     return 1;
 }
@@ -173,8 +178,9 @@ Samples* GetCleanT(Samples* sample)
     for (i = 0; i < sample->length; ++i)
     {
         /* TODO: Do we need to add 1 to all values, also negative 1 is subtracted to fix index */
-        cleanT->samples[i] = (((sample->samples[i] - 1) - CTS_t - 2 * SIFS) % BT_LEN);
+        cleanT->samples[i] = ((sample->samples[i] - CTS_t - (2 * SIFS)) % BT_LEN) + 1;
     }
+
     return cleanT;
 }
 
@@ -190,7 +196,7 @@ Samples* GetCleanF(Samples* sample)
 
     cleanF = AllocateSamples(BT_LEN);
     cleanF->length = BT_LEN;
-    D = DUMMY_t + CTS_t + 2 * SIFS;
+    D = DUMMY_t + CTS_t + (2 * SIFS);
     T = BT_LEN - D;
 
     for (i = 0; i < cleanF->length; ++i)
@@ -202,10 +208,10 @@ Samples* GetCleanF(Samples* sample)
     {
         thisT = sample->samples[i];
 
-        if (thisT < T )
+        if (thisT < T)
         {
             thisBgn = thisT;
-            thisEnd = thisT + D - 1;    /* Do we need - 1 here */
+            thisEnd = thisT + D;    /* Do we need - 1 here */
 
             for (j = thisBgn; j < thisEnd; ++j)
             {
@@ -223,7 +229,7 @@ Samples* GetCleanF(Samples* sample)
             }
 
             thisBgn = 0;
-            thisEnd = D - (BT_LEN - thisT);
+            thisEnd = D - (BT_LEN - thisT) + 1;
 
            for (j = thisBgn; j < thisEnd; ++j)
             {
@@ -231,6 +237,7 @@ Samples* GetCleanF(Samples* sample)
             }
         }
     }
+    
     return cleanF;
 }
 
@@ -308,6 +315,7 @@ OutputBoundary FindBoundary(Samples* foundTime, Samples* cleanF, Samples** shoul
     unsigned int D;
     unsigned int dummyTime;
     unsigned int stepdown;
+    unsigned int stepControl;
     unsigned int currval;
     unsigned int currdist;
     int inc;
@@ -366,8 +374,11 @@ OutputBoundary FindBoundary(Samples* foundTime, Samples* cleanF, Samples** shoul
     measuredDirtyP = (float)(foundTime->length - *totalTakeNum) / (BT_LEN - D);
     oneP = measuredDirtyP * EXPECTED_R_LEN;
     
-    for (stepdown = 1; stepdown <= 4; ++stepdown)
+    stepdown = 0;
+    
+    for (stepControl = 0; stepControl < 4; ++stepControl)
     {
+        ++stepdown;
         if (powf(oneP, stepdown) < TARGET_P)
         {
             break;
