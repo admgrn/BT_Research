@@ -84,10 +84,7 @@ int main(int argc, const char* argv[])
     cleanF = GetCleanF(cleanT);
     GetMaxValLoc(cleanF, &maxValue, &maxLocation);
 
-    if (!DetectBT(cleanF, foundTime->length, maxValue, totalNumberSamples))
-    {
-        return 0;
-    }
+    DetectBT(cleanF, foundTime->length, maxValue, totalNumberSamples);
 
     boundary = FindBoundary(foundTime, cleanF, &shouldTake, &totalTakeNum, maxLocation, maxValue);
     schedule = FindSchedule(foundTime, shouldTake, scores, maxLocation, totalTakeNum);

@@ -1,3 +1,5 @@
+arg = argv();
+
 GEN_TRACE = 1;
 
 BTRatio = 0.33; %Probability of BT transmission
@@ -5,9 +7,15 @@ BT_LEN = 625;
 
 if GEN_TRACE == 1
 
-BT_ROUND_SLOT_N = 4; 
-BT_MASTER_L = 2;
-BT_SLAVE_L  = 0.3;
+if (length(arg) ~= 3)
+    BT_ROUND_SLOT_N = 4; 
+    BT_MASTER_L = 2;
+    BT_SLAVE_L  = 0.3;
+else
+    BT_ROUND_SLOT_N = str2double(arg(1,1));
+    BT_MASTER_L = str2double(arg(2,1));
+    BT_SLAVE_L = str2double(arg(3,1));
+end
 
 TotalRoundNumArray = [500,250,166]*4; % with these numbers, we probe for 500*2*625=0.625 seconds
 TotalRoundNum = TotalRoundNumArray(BT_ROUND_SLOT_N/2);
@@ -298,20 +306,21 @@ minest6 = min(scores(2,:));
 MAGIC_C = 0.3; % NOTE: if 2, there will be equal number of 10 samples in each slot. if the actual schedule is 6, 2/3 of them will reegister a point. if 4, 1/2. Given there are random variations, 0.3 turns out to be a good number
 
 if minest4 > totaltakenum * MAGIC_C && minest6 > totaltakenum * MAGIC_C
-    fprintf(1,'we think the schdule is 2!!!\n');
+    fprintf(1,'we think the schedule is 2!!!\n');
 else
     if minest4 < 0.5 * minest6 % NOTE: 2 because a dirty sample is twice more likely to register a point with 6 than with 4
-        fprintf(1,'we think the schdule is 4!!!\n');
+        fprintf(1,'we think the schedule is 4!!!\n');
     else
-        fprintf(1,'we think the schdule is 6!!!\n');
+        fprintf(1,'we think the schedule is 6!!!\n');
     end
 end
 
 % finding schedule end
 %------------------------------------------------------------------
 
+name = 'output.txt';
 
-fid = fopen('output.txt','w');
+fid = fopen(name,'w');
 
 fprintf(fid,'%d\n',numbertotalsamples);
 for i=1:length(found10time)
