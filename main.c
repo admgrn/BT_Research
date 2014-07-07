@@ -11,7 +11,7 @@ const unsigned int BT_LEN = 625;		// Length of BT timeslot
 const unsigned int CTS_t = 60;			// Time taken to transmit clear to send signal
 const unsigned int SIFS = 10;			// Short Interframe Spacing
 const unsigned int DUMMY_t = 50;		// Length of probe packet
-const unsigned int MAX_SLOT_NUM = 6;    // Max allowable timeslots for a single BT transmission/ reponse
+const unsigned int MAX_SLOT_NUM = 6;    // Max allowable timeslots for a single BT transaction (transmission/ reponse)
 const unsigned int SCORE_SLOT = 2;
 
 const unsigned int MAX_SAMPLE_SIZE = 100;
